@@ -53,9 +53,10 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const row = 'group flex w-full items-center gap-4 rounded-lg px-3 py-3 text-[15px] transition hover:bg-white/10'
   const label = (l: string, a: boolean) => <span className={`hidden lg:inline ${a ? 'font-bold' : ''}`}>{l}</span>
   const profile = `/u/${me.username}`
+  const wide = path.startsWith('/messages')
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[76px_1fr] lg:grid-cols-[245px_1fr] xl:grid-cols-[245px_1fr_340px]">
-      <aside className="sticky top-0 hidden h-screen flex-col bg-side px-3 py-6 md:flex">
+    <div className={`min-h-screen md:grid md:grid-cols-[76px_1fr] lg:grid-cols-[245px_1fr] ${wide ? '' : 'xl:grid-cols-[245px_1fr_340px]'}`}>
+      <aside className={`sticky top-0 hidden h-screen flex-col bg-side px-3 py-6 md:flex ${wide ? 'border-r border-line' : ''}`}>
         <Link href="/" className="mb-6 px-3" aria-label="Connect home">
           <img src="/logo.svg" alt="Connect" className="hidden h-7 w-auto lg:block" />
           <div className="h-7 w-7 overflow-hidden lg:hidden"><img src="/logo.svg" alt="Connect" className="h-7 max-w-none" /></div>
@@ -72,11 +73,11 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <Link href="/settings" className={row}><Menu size={26} strokeWidth={on('/settings') ? 2.6 : 1.8} />{label('Menu', on('/settings'))}</Link>
         </nav>
       </aside>
-      <main className="mx-auto w-full max-w-[640px] px-4 pb-24 pt-5 md:pb-10 md:pt-8">
-        <img src="/logo.svg" alt="Connect" className="mb-4 h-6 w-auto md:hidden" />
+      <main className={wide ? 'w-full min-w-0' : 'mx-auto w-full max-w-[640px] px-4 pb-24 pt-5 md:pb-10 md:pt-8'}>
+        {!wide && <img src="/logo.svg" alt="Connect" className="mb-4 h-6 w-auto md:hidden" />}
         {children}
       </main>
-      <aside className="hidden p-4 pt-8 xl:block"><div className="sticky top-8"><Rail me={me} /></div></aside>
+      {!wide && <aside className="hidden p-4 pt-8 xl:block"><div className="sticky top-8"><Rail me={me} /></div></aside>}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex items-center justify-around border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         {[['/', House, 'Home'], ['/explore', Search, 'Search'], ['/create', SquarePlus, 'Create'], ['/messages', MessageCircle, 'Messages']].map(([h, Icon, l]) => {
           const I = Icon as typeof House
