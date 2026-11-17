@@ -3,7 +3,8 @@
 // When the backend is ready, only this file changes (actions -> fetch calls).
 import { useSyncExternalStore } from 'react'
 
-export type User = { id: string; username: string; name: string; bio: string; follows: string[]; pw?: string }
+export type Highlight = { id: string; title: string; img: string }
+export type User = { id: string; username: string; name: string; bio: string; follows: string[]; pw?: string; highlights?: Highlight[] }
 export type Post = { id: string; by: string; cap: string; imgs: string[]; t: number; likes: string[]; saved?: string[]; loc?: string; shares?: number; comments?: { id: string; by: string; body: string; t: number }[] }
 export type Story = { id: string; by: string; img: string; t: number; seen: string[] }
 export type Msg = { id: string; from: string; to: string; body: string; t: number; hid?: string[] }
@@ -67,6 +68,9 @@ export const actions = {
   comment: (id: string, body: string) => edit(d => { const p = d.posts.find(x => x.id === id)!; (p.comments ??= []).push({ id: uid(), by: d.me!, body: body.slice(0, 500), t: Date.now() }) }),
   share: (id: string) => edit(d => { const p = d.posts.find(x => x.id === id)!; p.shares = (p.shares ?? 0) + 1 }),
   profile: (name: string, bio: string) => edit(d => { const u = d.users.find(x => x.id === d.me)!; u.name = name.slice(0, 60); u.bio = bio.slice(0, 160) }),
+  // Profile highlights (the round "New" circles on a profile)
+  highlight: (title: string, img: string) => edit(d => { const u = d.users.find(x => x.id === d.me)!; (u.highlights ??= []).push({ id: uid(), title: title.trim().slice(0, 15) || 'Highlights', img }) }),
+  delHighlight: (id: string) => edit(d => { const u = d.users.find(x => x.id === d.me)!; u.highlights = (u.highlights ?? []).filter(h => h.id !== id) }),
   deleteAccount: () => edit(d => {
     const id = d.me!
     d.users = d.users.filter(u => u.id !== id); d.posts = d.posts.filter(p => p.by !== id); d.stories = d.stories.filter(s => s.by !== id)
