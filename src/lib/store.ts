@@ -4,7 +4,7 @@
 import { useSyncExternalStore } from 'react'
 
 export type User = { id: string; username: string; name: string; bio: string; follows: string[]; pw?: string }
-export type Post = { id: string; by: string; cap: string; imgs: string[]; t: number; likes: string[]; loc?: string; shares?: number; comments?: { id: string; by: string; body: string; t: number }[] }
+export type Post = { id: string; by: string; cap: string; imgs: string[]; t: number; likes: string[]; saved?: string[]; loc?: string; shares?: number; comments?: { id: string; by: string; body: string; t: number }[] }
 export type Story = { id: string; by: string; img: string; t: number; seen: string[] }
 export type Msg = { id: string; from: string; to: string; body: string; t: number }
 type DB = { users: User[]; posts: Post[]; stories: Story[]; msgs: Msg[]; me: string | null }
@@ -72,6 +72,7 @@ export const actions = {
     d.users = d.users.filter(u => u.id !== id); d.posts = d.posts.filter(p => p.by !== id); d.stories = d.stories.filter(s => s.by !== id)
     d.msgs = d.msgs.filter(m => m.from !== id && m.to !== id); d.users.forEach(u => { u.follows = u.follows.filter(x => x !== id) }); d.me = null
   }),
+  save: (id: string) => edit(d => { const p = d.posts.find(x => x.id === id)!, s = (p.saved ??= []), i = s.indexOf(d.me!); i < 0 ? s.push(d.me!) : s.splice(i, 1) }),
   story: (img: string) => edit(d => { d.stories.push({ id: uid(), by: d.me!, img, t: Date.now(), seen: [] }) }),
   seen: (by: string) => edit(d => { d.stories.forEach(s => { if (s.by === by && !s.seen.includes(d.me!)) s.seen.push(d.me!) }) }),
   send(to: string, body: string) {
