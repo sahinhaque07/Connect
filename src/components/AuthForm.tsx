@@ -16,7 +16,7 @@ export default function AuthForm() {
   return (
     <div className="grid min-h-screen place-items-center p-4">
       <form onSubmit={submit} className={`${card} w-96 max-w-full !p-7`}>
-        <h1 className="text-3xl font-bold">Connect</h1>
+        <img src="/logo.png" alt="Connect" className="mb-2 h-9 w-auto" />
         <p className="mb-5 text-sm text-mute">Share • Explore • Belong</p>
         <div className="mb-4 flex gap-2">
           {['Log in', 'Create account'].map((t, i) => (

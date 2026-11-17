@@ -4,7 +4,7 @@
 import { useSyncExternalStore } from 'react'
 
 export type User = { id: string; username: string; name: string; bio: string; follows: string[]; pw?: string }
-export type Post = { id: string; by: string; cap: string; imgs: string[]; t: number; likes: string[] }
+export type Post = { id: string; by: string; cap: string; imgs: string[]; t: number; likes: string[]; loc?: string; shares?: number; comments?: { id: string; by: string; body: string; t: number }[] }
 export type Story = { id: string; by: string; img: string; t: number; seen: string[] }
 export type Msg = { id: string; from: string; to: string; body: string; t: number }
 type DB = { users: User[]; posts: Post[]; stories: Story[]; msgs: Msg[]; me: string | null }
@@ -53,7 +53,7 @@ export const actions = {
     edit(d => { d.me = u.id })
   },
   logout: () => edit(d => { d.me = null }),
-  post: (cap: string, imgs: string[]) => edit(d => { d.posts.unshift({ id: uid(), by: d.me!, cap, imgs, t: Date.now(), likes: [] }) }),
+  post: (cap: string, imgs: string[], loc = '') => edit(d => { d.posts.unshift({ id: uid(), by: d.me!, cap, imgs, t: Date.now(), likes: [], loc: loc.trim(), shares: 0, comments: [] }) }),
   delPost: (id: string) => edit(d => { d.posts = d.posts.filter(p => !(p.id === id && p.by === d.me)) }),
   like: (id: string) => edit(d => {
     const p = d.posts.find(x => x.id === id)!, i = p.likes.indexOf(d.me!)
@@ -64,6 +64,14 @@ export const actions = {
     i < 0 ? m.follows.push(id) : m.follows.splice(i, 1)
   }),
   bio: (bio: string) => edit(d => { d.users.find(u => u.id === d.me)!.bio = bio.slice(0, 160) }),
+  comment: (id: string, body: string) => edit(d => { const p = d.posts.find(x => x.id === id)!; (p.comments ??= []).push({ id: uid(), by: d.me!, body: body.slice(0, 500), t: Date.now() }) }),
+  share: (id: string) => edit(d => { const p = d.posts.find(x => x.id === id)!; p.shares = (p.shares ?? 0) + 1 }),
+  profile: (name: string, bio: string) => edit(d => { const u = d.users.find(x => x.id === d.me)!; u.name = name.slice(0, 60); u.bio = bio.slice(0, 160) }),
+  deleteAccount: () => edit(d => {
+    const id = d.me!
+    d.users = d.users.filter(u => u.id !== id); d.posts = d.posts.filter(p => p.by !== id); d.stories = d.stories.filter(s => s.by !== id)
+    d.msgs = d.msgs.filter(m => m.from !== id && m.to !== id); d.users.forEach(u => { u.follows = u.follows.filter(x => x !== id) }); d.me = null
+  }),
   story: (img: string) => edit(d => { d.stories.push({ id: uid(), by: d.me!, img, t: Date.now(), seen: [] }) }),
   seen: (by: string) => edit(d => { d.stories.forEach(s => { if (s.by === by && !s.seen.includes(d.me!)) s.seen.push(d.me!) }) }),
   send(to: string, body: string) {
