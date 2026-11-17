@@ -2,12 +2,16 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ArrowLeft, ChevronDown, Search, Send, Smile, SquarePen, X } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Ellipsis, Search, Send, Smile, SquarePen, Trash2, X } from 'lucide-react'
 import { actions, ago, useDB, type Msg, type User } from '@/lib/store'
 import { Avatar } from '@/components/ui'
 
 type Row = { u: User; m?: Msg }
+type Menu = { kind: 'chat' | 'msg'; id: string; x: number; y: number } | null
 const EMOJIS = ['😊', '😂', '😍', '🔥', '👍', '🙏', '🎉', '❤️']
+// 3-dot button: hidden until you hover the row (always visible on touch screens)
+const dotsCls = (lit: boolean) =>
+  `rounded-full p-1.5 text-mute transition hover:bg-white/10 hover:text-white focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100 ${lit ? 'opacity-100' : 'opacity-0'}`
 
 export default function MessagesPage() {
   const db = useDB()
@@ -20,10 +24,12 @@ export default function MessagesPage() {
   const [emoji, setEmoji] = useState(false)
   const [compose, setCompose] = useState(false)
   const [cq, setCq] = useState('')
+  const [menu, setMenu] = useState<Menu>(null)
+  const [confirm, setConfirm] = useState<string | null>(null)
   const box = useRef<HTMLDivElement>(null)
 
-  // ---- conversations ----
-  const mine = db.msgs.filter(m => m.from === me.id || m.to === me.id)
+  // ---- conversations (messages I deleted for myself are hidden) ----
+  const mine = db.msgs.filter(m => (m.from === me.id || m.to === me.id) && !m.hid?.includes(me.id))
   const sent = new Set(mine.filter(m => m.from === me.id).map(m => m.to))
   const last = new Map<string, Msg>()
   for (const m of mine) {
@@ -48,12 +54,41 @@ export default function MessagesPage() {
   const p = db.users.find(u => u.id === peer)
   const chat = p ? mine.filter(m => m.from === p.id || m.to === p.id) : []
   useEffect(() => { const b = box.current; if (b) b.scrollTop = b.scrollHeight }, [chat.length, peer])
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { setMenu(null); setConfirm(null); setCompose(false) } }
+    window.addEventListener('keydown', k)
+    return () => window.removeEventListener('keydown', k)
+  }, [])
 
-  const open = (id: string) => { setPeer(id); setQ(''); setCompose(false); setCq(''); setText(''); setEmoji(false) }
+  const open = (id: string) => { setPeer(id); setQ(''); setCompose(false); setCq(''); setText(''); setEmoji(false); setMenu(null) }
   const send = () => {
     const b = text.trim()
     if (!b || !p) return
     actions.send(p.id, b); setText(''); setEmoji(false)
+  }
+
+  // ---- 3-dot menu ----
+  const openMenu = (e: React.MouseEvent<HTMLElement>, kind: 'chat' | 'msg', id: string) => {
+    e.stopPropagation()
+    const r = e.currentTarget.getBoundingClientRect(), w = 176, h = 52
+    setMenu({
+      kind, id,
+      x: Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)),
+      y: r.bottom + h + 8 > window.innerHeight ? r.top - h - 4 : r.bottom + 4,
+    })
+  }
+  const doDelete = () => {
+    if (!menu) return
+    if (menu.kind === 'msg') actions.delMsg(menu.id)
+    else setConfirm(menu.id)
+    setMenu(null)
+  }
+  const confirmUser = db.users.find(u => u.id === confirm)
+  const deleteChat = () => {
+    if (!confirm) return
+    actions.delChat(confirm)
+    if (peer === confirm) setPeer(null)
+    setConfirm(null)
   }
 
   const candidates = db.users
@@ -95,15 +130,23 @@ export default function MessagesPage() {
           ) : (
             <>
               {shown.map(r => (
-                <button key={r.u.id} onClick={() => open(r.u.id)} className={`flex w-full items-center gap-3 px-6 py-2.5 text-left transition hover:bg-white/5 ${peer === r.u.id ? 'bg-white/10' : ''}`}>
-                  <Avatar name={r.u.name} size={52} />
-                  <div className="min-w-0 flex-1 leading-tight">
-                    <b className="block truncate text-[15px]">{r.u.username}</b>
-                    <span className="block truncate text-sm text-mute">
-                      {r.m ? `${r.m.from === me.id ? 'You: ' : ''}${r.m.body} · ${ago(r.m.t)}` : 'Start a conversation'}
-                    </span>
-                  </div>
-                </button>
+                <div key={r.u.id} className={`group relative transition ${peer === r.u.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                  <button onClick={() => open(r.u.id)} className="flex w-full items-center gap-3 px-6 py-2.5 pr-14 text-left">
+                    <Avatar name={r.u.name} size={52} />
+                    <div className="min-w-0 flex-1 leading-tight">
+                      <b className="block truncate text-[15px]">{r.u.username}</b>
+                      <span className="block truncate text-sm text-mute">
+                        {r.m ? `${r.m.from === me.id ? 'You: ' : ''}${r.m.body} · ${ago(r.m.t)}` : 'Start a conversation'}
+                      </span>
+                    </div>
+                  </button>
+                  {r.m && (
+                    <button aria-label="Chat options" onClick={e => openMenu(e, 'chat', r.u.id)}
+                      className={`absolute right-4 top-1/2 -translate-y-1/2 ${dotsCls(menu?.kind === 'chat' && menu.id === r.u.id)}`}>
+                      <Ellipsis size={22} />
+                    </button>
+                  )}
+                </div>
               ))}
               {!shown.length && (
                 <p className="px-6 py-6 text-sm text-mute">
@@ -130,10 +173,19 @@ export default function MessagesPage() {
               {chat.map((m, i) => {
                 const mineMsg = m.from === me.id
                 const gap = i === 0 || m.t - chat[i - 1].t > 36e5
+                const dots = (
+                  <button aria-label="Message options" onClick={e => openMenu(e, 'msg', m.id)} className={dotsCls(menu?.kind === 'msg' && menu.id === m.id)}>
+                    <Ellipsis size={18} />
+                  </button>
+                )
                 return (
                   <div key={m.id} className="flex flex-col">
                     {gap && <span className="my-2 self-center text-xs text-mute">{ago(m.t)}</span>}
-                    <div className={`max-w-[75%] break-words rounded-3xl px-4 py-2.5 text-[15px] ${mineMsg ? 'self-end bg-brand' : 'self-start bg-panel2'}`}>{m.body}</div>
+                    <div className={`group flex items-center gap-1 ${mineMsg ? 'justify-end' : 'justify-start'}`}>
+                      {mineMsg && dots}
+                      <div className={`max-w-[75%] break-words rounded-3xl px-4 py-2.5 text-[15px] ${mineMsg ? 'bg-brand' : 'bg-panel2'}`}>{m.body}</div>
+                      {!mineMsg && dots}
+                    </div>
                   </div>
                 )
               })}
@@ -168,6 +220,32 @@ export default function MessagesPage() {
           </div>
         )}
       </section>
+
+      {/* ===== 3-dot menu popup ===== */}
+      {menu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setMenu(null)} />
+          <div role="menu" style={{ left: menu.x, top: menu.y }} className="fixed z-50 w-44 overflow-hidden rounded-xl border border-line bg-panel2 py-1 shadow-xl">
+            <button role="menuitem" onClick={doDelete} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] font-semibold text-red-500 transition hover:bg-white/10">
+              <Trash2 size={18} />Delete
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ===== Delete chat confirmation ===== */}
+      {confirm && confirmUser && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={() => setConfirm(null)}>
+          <div role="dialog" aria-label="Delete chat" className="w-full max-w-[360px] overflow-hidden rounded-2xl bg-panel2 text-center" onClick={e => e.stopPropagation()}>
+            <div className="px-6 pb-5 pt-6">
+              <b className="block text-lg">Delete chat?</b>
+              <p className="mt-2 text-sm text-mute">This removes your chat with @{confirmUser.username} from your inbox. It only deletes it for you.</p>
+            </div>
+            <button onClick={deleteChat} className="w-full border-t border-line py-3 text-[15px] font-bold text-red-500 transition hover:bg-white/5">Delete</button>
+            <button onClick={() => setConfirm(null)} className="w-full border-t border-line py-3 text-[15px] transition hover:bg-white/5">Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* ===== New message popup ===== */}
       {compose && (

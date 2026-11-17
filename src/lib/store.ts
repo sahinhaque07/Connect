@@ -6,7 +6,7 @@ import { useSyncExternalStore } from 'react'
 export type User = { id: string; username: string; name: string; bio: string; follows: string[]; pw?: string }
 export type Post = { id: string; by: string; cap: string; imgs: string[]; t: number; likes: string[]; saved?: string[]; loc?: string; shares?: number; comments?: { id: string; by: string; body: string; t: number }[] }
 export type Story = { id: string; by: string; img: string; t: number; seen: string[] }
-export type Msg = { id: string; from: string; to: string; body: string; t: number }
+export type Msg = { id: string; from: string; to: string; body: string; t: number; hid?: string[] }
 type DB = { users: User[]; posts: Post[]; stories: Story[]; msgs: Msg[]; me: string | null }
 
 const KEY = 'connect_web_v1'
@@ -75,6 +75,21 @@ export const actions = {
   save: (id: string) => edit(d => { const p = d.posts.find(x => x.id === id)!, s = (p.saved ??= []), i = s.indexOf(d.me!); i < 0 ? s.push(d.me!) : s.splice(i, 1) }),
   story: (img: string) => edit(d => { d.stories.push({ id: uid(), by: d.me!, img, t: Date.now(), seen: [] }) }),
   seen: (by: string) => edit(d => { d.stories.forEach(s => { if (s.by === by && !s.seen.includes(d.me!)) s.seen.push(d.me!) }) }),
+  // Delete one message: my own message is removed for everyone, a received one is hidden only for me.
+  delMsg: (id: string) => edit(d => {
+    const m = d.msgs.find(x => x.id === id)
+    if (!m) return
+    if (m.from === d.me) d.msgs = d.msgs.filter(x => x.id !== id)
+    else if (m.to === d.me) { const h = (m.hid ??= []); if (!h.includes(d.me!)) h.push(d.me!) }
+  }),
+  // Delete a whole chat: hides every message of that chat for me only.
+  delChat: (peer: string) => edit(d => {
+    d.msgs.forEach(m => {
+      if ((m.from === d.me && m.to === peer) || (m.from === peer && m.to === d.me)) {
+        const h = (m.hid ??= []); if (!h.includes(d.me!)) h.push(d.me!)
+      }
+    })
+  }),
   send(to: string, body: string) {
     edit(d => { d.msgs.push({ id: uid(), from: d.me!, to, body, t: Date.now() }) })
     if (db.users.find(u => u.id === to && !u.pw))

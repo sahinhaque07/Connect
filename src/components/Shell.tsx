@@ -64,7 +64,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         <nav className="flex flex-1 flex-col gap-0.5">
           {nav.map(([h, l, Icon]) => {
             const a = on(h)
-            const inner = <><Icon size={26} strokeWidth={a ? 2.6 : 1.8} className="transition group-hover:scale-105" fill={a && l === 'Home' ? 'currentColor' : 'none'} />{label(l, a)}</>
+            const inner = <><Icon size={26} strokeWidth={a ? 2.6 : 1.8} className="transition group-hover:scale-105" />{label(l, a)}</>
             return h ? <Link key={l} href={h} className={row}>{inner}</Link> : <button key={l} className={row} onClick={soon}>{inner}</button>
           })}
           <Link href={profile} className={row}>
