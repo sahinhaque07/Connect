@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Bookmark, ChevronLeft, ChevronRight, Heart, ImagePlus, MapPin, MessageCircle, MoreHorizontal, Plus, Send, Smile } from 'lucide-react'
-import { actions, activeStories, ago, pick, useDB, type Post } from '@/lib/store'
+import { actions, activeStories, ago, likeCount, pick, useDB, type Post } from '@/lib/store'
 import { Avatar, btn, card, field, ghost } from './ui'
 
 const short = (t: number) => {
@@ -29,7 +29,7 @@ export function Stories({ grid }: { grid?: boolean }) {
           return (
             <button key={id} className="w-[68px] shrink-0 text-center text-xs transition hover:opacity-90" onClick={() => open(id)}>
               <div className="mx-auto mb-1 w-fit">
-                {seen ? <div className="rounded-full border-2 border-line p-[2px]"><Avatar name={u.name} size={54} /></div> : <Avatar name={u.name} size={58} ring />}
+                {seen ? <div className="rounded-full border-2 border-line p-[2px]"><Avatar name={u.name} src={u.avatar} size={54} /></div> : <Avatar name={u.name} src={u.avatar} size={58} ring />}
               </div>
               <span className="block truncate">{id === me.id ? 'Your story' : u.username}</span></button>
           )
@@ -96,7 +96,7 @@ export function PostCard({ p }: { p: Post }) {
     <article className="mb-8 border-b border-line pb-5">
       <div className="mb-3 flex items-center gap-3">
         <Link href={`/u/${a.username}`} className="flex items-center gap-3">
-          {hasStory ? <Avatar name={a.name} size={34} ring /> : <Avatar name={a.name} size={38} />}
+          {hasStory ? <Avatar name={a.name} src={a.avatar} size={34} ring /> : <Avatar name={a.name} src={a.avatar} size={38} />}
           <div className="leading-tight"><b className="text-sm">{a.username}</b><span className="text-sm text-mute"> · {short(p.t)}</span>
             {p.loc && <div className="text-xs">{p.loc}</div>}</div>
         </Link>
@@ -129,7 +129,7 @@ export function PostCard({ p }: { p: Post }) {
         {copied && <span className="text-xs text-mute">Link copied</span>}
         <button aria-label="Save" onClick={() => actions.save(p.id)} className="ml-auto transition hover:text-mute"><Bookmark size={26} strokeWidth={1.8} fill={saved ? 'currentColor' : 'none'} /></button>
       </div>
-      <p className="mt-2 text-sm font-semibold">{p.likes.length ? `${p.likes.length.toLocaleString()} like${p.likes.length > 1 ? 's' : ''}` : 'Be the first to like this'}</p>
+      <p className="mt-2 text-sm font-semibold">{likeCount(p) ? `${likeCount(p).toLocaleString()} like${likeCount(p) > 1 ? 's' : ''}` : 'Be the first to like this'}</p>
       {p.cap && <p className="mt-1 whitespace-pre-wrap text-sm"><b>{a.username}</b> {p.cap}</p>}
       {cm.length > 0 && !all && <button className="mt-1 text-sm text-mute" onClick={() => setAll(true)}>View all {cm.length} comment{cm.length > 1 ? 's' : ''}</button>}
       {all && <div className="mt-2 space-y-1 text-sm">{cm.map(c => <p key={c.id}><b>{who(c.by)}</b> {c.body}</p>)}</div>}

@@ -121,7 +121,7 @@ export default function MessagesPage() {
             <>
               {found.map(u => (
                 <button key={u.id} onClick={() => open(u.id)} className="flex w-full items-center gap-3 px-6 py-2.5 text-left transition hover:bg-white/5">
-                  <Avatar name={u.name} size={52} />
+                  <Avatar name={u.name} src={u.avatar} size={52} />
                   <div className="min-w-0 leading-tight"><b className="block truncate text-[15px]">{u.username}</b><span className="text-sm text-mute">{u.name}</span></div>
                 </button>
               ))}
@@ -132,7 +132,7 @@ export default function MessagesPage() {
               {shown.map(r => (
                 <div key={r.u.id} className={`group relative transition ${peer === r.u.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
                   <button onClick={() => open(r.u.id)} className="flex w-full items-center gap-3 px-6 py-2.5 pr-14 text-left">
-                    <Avatar name={r.u.name} size={52} />
+                    <Avatar name={r.u.name} src={r.u.avatar} size={52} />
                     <div className="min-w-0 flex-1 leading-tight">
                       <b className="block truncate text-[15px]">{r.u.username}</b>
                       <span className="block truncate text-sm text-mute">
@@ -165,7 +165,7 @@ export default function MessagesPage() {
             <header className="flex items-center gap-3 border-b border-line px-4 py-3 md:px-6">
               <button aria-label="Back" onClick={() => setPeer(null)} className="rounded-lg p-1 hover:bg-white/10 md:hidden"><ArrowLeft size={24} /></button>
               <Link href={`/u/${p.username}`} className="flex min-w-0 items-center gap-3">
-                <Avatar name={p.name} size={40} />
+                <Avatar name={p.name} src={p.avatar} size={40} />
                 <div className="min-w-0 leading-tight"><b className="block truncate text-[15px]">{p.name}</b><span className="text-xs text-mute">@{p.username}</span></div>
               </Link>
             </header>
@@ -191,7 +191,7 @@ export default function MessagesPage() {
               })}
               {!chat.length && (
                 <div className="m-auto text-center">
-                  <div className="mx-auto mb-3 w-fit"><Avatar name={p.name} size={84} /></div>
+                  <div className="mx-auto mb-3 w-fit"><Avatar name={p.name} src={p.avatar} size={84} /></div>
                   <b className="block text-lg">{p.name}</b>
                   <span className="text-sm text-mute">@{p.username} · Say hello 👋</span>
                 </div>
@@ -262,7 +262,7 @@ export default function MessagesPage() {
             <div className="min-h-[120px] overflow-y-auto py-2">
               {candidates.map(u => (
                 <button key={u.id} onClick={() => open(u.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-white/5">
-                  <Avatar name={u.name} size={44} />
+                  <Avatar name={u.name} src={u.avatar} size={44} />
                   <div className="min-w-0 leading-tight"><b className="block truncate text-[15px]">{u.username}</b><span className="text-sm text-mute">{u.name}</span></div>
                 </button>
               ))}

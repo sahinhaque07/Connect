@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { Bookmark, Camera, Clapperboard, Copy, Grid3x3, Heart, MessageCircle, Plus, Send, Settings, SquareUser, X, type LucideIcon } from 'lucide-react'
 import { PostCard } from '@/components/Feed'
 import { Avatar, card } from '@/components/ui'
-import { actions, activeStories, pick, useDB, type Highlight, type Post } from '@/lib/store'
+import { actions, activeStories, likeCount, pick, pickAvatar, useDB, type Highlight, type Post } from '@/lib/store'
 
 type Tab = 'posts' | 'reels' | 'saved' | 'tagged'
 
@@ -32,7 +32,7 @@ function Tile({ p, onOpen }: { p: Post; onOpen: () => void }) {
         : <p className="line-clamp-6 p-3 text-sm">{p.cap}</p>}
       {p.imgs.length > 1 && <Copy size={20} className="absolute right-2 top-2 text-white drop-shadow" />}
       <div className="absolute inset-0 hidden items-center justify-center gap-6 bg-black/40 font-bold text-white group-hover:flex">
-        <span className="flex items-center gap-1.5"><Heart size={20} fill="currentColor" />{p.likes.length}</span>
+        <span className="flex items-center gap-1.5"><Heart size={20} fill="currentColor" />{likeCount(p).toLocaleString()}</span>
         <span className="flex items-center gap-1.5"><MessageCircle size={20} fill="currentColor" />{p.comments?.length ?? 0}</span>
       </div>
     </button>
@@ -43,10 +43,10 @@ const Grid = ({ list, open }: { list: Post[]; open: (id: string) => void }) => (
   <div className="grid grid-cols-3 gap-0.5 sm:gap-1">{list.map(p => <Tile key={p.id} p={p} onOpen={() => open(p.id)} />)}</div>
 )
 
-function Profile({ username }: { username: string }) {
+function Profile({ username, startTab }: { username: string; startTab: Tab }) {
   const db = useDB(), me = db.users.find(x => x.id === db.me)!
   const u = db.users.find(x => x.username === username)
-  const [tab, setTab] = useState<Tab>('posts'), [openId, setOpenId] = useState<string | null>(null)
+  const [tab, setTab] = useState<Tab>(startTab), [openId, setOpenId] = useState<string | null>(null)
   const [hl, setHl] = useState<Highlight | null>(null), [toast, setToast] = useState('')
 
   useEffect(() => {
@@ -66,6 +66,10 @@ function Profile({ username }: { username: string }) {
   const highlights = u.highlights ?? []
   const stats: [number, string][] = [[posts.length, 'posts'], [db.users.filter(x => x.follows.includes(u.id)).length, 'followers'], [u.follows.length, 'following']]
 
+  const changePhoto = async () => {
+    const img = await pickAvatar()
+    if (img) { actions.avatar(img); soon('Profile photo updated') }
+  }
   const soon = (m: string) => { setToast(m); setTimeout(() => setToast(''), 1600) }
   const addHighlight = async () => {
     const [img] = await pick(false)
@@ -95,8 +99,18 @@ function Profile({ username }: { username: string }) {
       {/* ---------- Header ---------- */}
       <header className="flex items-start gap-5 sm:gap-10 md:gap-16">
         <div className="shrink-0 md:flex md:w-[220px] md:justify-center">
-          <span className="hidden md:block"><Avatar name={u.name} size={150} ring={hasStory} /></span>
-          <span className="md:hidden"><Avatar name={u.name} size={80} ring={hasStory} /></span>
+          {own ? (
+            <button aria-label="Change profile photo" onClick={changePhoto} className="group relative block rounded-full">
+              <span className="hidden md:block"><Avatar name={u.name} src={u.avatar} size={150} ring={hasStory} /></span>
+              <span className="md:hidden"><Avatar name={u.name} src={u.avatar} size={80} ring={hasStory} /></span>
+              <span className="absolute inset-0 grid place-items-center rounded-full bg-black/50 opacity-0 transition group-hover:opacity-100"><Camera size={30} /></span>
+            </button>
+          ) : (
+            <>
+              <span className="hidden md:block"><Avatar name={u.name} src={u.avatar} size={150} ring={hasStory} /></span>
+              <span className="md:hidden"><Avatar name={u.name} src={u.avatar} size={80} ring={hasStory} /></span>
+            </>
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
@@ -226,6 +240,8 @@ function Profile({ username }: { username: string }) {
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>()
-  // key = username, so tab/modal state resets when you move between profiles
-  return <Profile key={username} username={username} />
+  const t = useSearchParams().get('tab')
+  const startTab: Tab = t === 'saved' || t === 'reels' || t === 'tagged' ? t : 'posts'
+  // key = username + tab, so tab/modal state resets when you move between profiles or open /u/you?tab=saved
+  return <Profile key={`${username}-${startTab}`} username={username} startTab={startTab} />
 }

@@ -1,14 +1,44 @@
 'use client'
 import { useState } from 'react'
-import { actions, useDB } from '@/lib/store'
-import { btn, card, field, ghost } from '@/components/ui'
+import { Camera } from 'lucide-react'
+import { actions, pickAvatar, useDB } from '@/lib/store'
+import { Avatar, btn, card, field, ghost } from '@/components/ui'
 
 export default function SettingsPage() {
   const db = useDB(), me = db.users.find(u => u.id === db.me)!
   const [name, setName] = useState(me.name), [bio, setBio] = useState(me.bio), [saved, setSaved] = useState(false)
+  const [photoMsg, setPhotoMsg] = useState('')
+
+  const changePhoto = async () => {
+    const img = await pickAvatar()
+    if (!img) return
+    actions.avatar(img)
+    setPhotoMsg('Profile photo updated ✓')
+  }
+  const removePhoto = () => { actions.avatar(''); setPhotoMsg('Profile photo removed') }
+
   return (
     <>
       <h1 className="mb-4 text-2xl font-bold">Settings</h1>
+
+      <div className={card}>
+        <h2 className="mb-3 font-semibold">Profile photo</h2>
+        <div className="flex items-center gap-4">
+          <button aria-label="Change profile photo" onClick={changePhoto} className="group relative shrink-0 rounded-full">
+            <Avatar name={me.name} src={me.avatar} size={88} />
+            <span className="absolute inset-0 grid place-items-center rounded-full bg-black/50 opacity-0 transition group-hover:opacity-100"><Camera size={26} /></span>
+          </button>
+          <div className="min-w-0">
+            <b className="block truncate">{me.username}</b>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button className={btn} onClick={changePhoto}>{me.avatar ? 'Change photo' : 'Add photo'}</button>
+              {me.avatar && <button className={ghost} onClick={removePhoto}>Remove</button>}
+            </div>
+            {photoMsg && <p className="mt-2 text-sm text-mute">{photoMsg}</p>}
+          </div>
+        </div>
+      </div>
+
       <div className={card}>
         <h2 className="mb-3 font-semibold">Profile</h2>
         <label className="text-sm text-mute">Display name</label>
